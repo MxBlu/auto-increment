@@ -24,7 +24,7 @@
     "clean": "rimraf lib .tsbuildinfo coverage doc build",
     "prepare": "npm run build:dist",
     "version:patch": "npm run build:dist && npm version patch -m 'Release %s'",
-    "postinstall": "npm run build:dist"
+    "postinstall": "tsc -p tsconfig.build.json"
   },
   "repository": {
     "type": "git",
