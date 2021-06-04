@@ -62,9 +62,10 @@ export function AutoIncrementSimple(
 const IDSchema = new mongoose.Schema({
   field: String,
   model: String,
-  count: Number
+  count: Number,
+  reference_values: Object
 }, { versionKey: false });
-IDSchema.index({ field: 1, model: 1 }, { unique: true });
+IDSchema.index({ field: 1, model: 1, reference_value: 1 }, { unique: true });
 
 export const AutoIncrementIDSkipSymbol = Symbol('AutoIncrementIDSkip');
 
@@ -82,6 +83,7 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
     trackerCollection: 'identitycounters',
     trackerModelName: 'identitycounter',
     startAt: 0,
+    reference_fields: [],
     ...options
   };
 
@@ -90,7 +92,26 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
     throw new Error(`Field "${opt.field}" is not an SchemaNumber!`);
   }
 
+  // Check that reference fields exist in the model
+  for (const field of opt.reference_fields) {
+    if (!(schema.path(field) != null)) {
+      throw new Error(`Reference field "${field}" does not exist!`);
+    }
+  }
+
   let model: mongoose.Model<mongoose.Document & AutoIncrementIDTrackerSpec>;
+
+  // Return the values of the reference fields in a given doc
+  const _getCounterReferenceField = (doc: mongoose.Document): object => {
+    const reference_values: object = {};
+
+    // Populate the reference object with reference values
+    for (const field of opt.reference_fields) {
+      reference_values[field] = doc[field];
+    }
+
+    return reference_values;
+  };
 
   logger.info('AutoIncrementID called with options %O', opt);
 
@@ -99,18 +120,22 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
 
     const modelName: string = (this.constructor as any).modelName;
 
+    // Get reference values for doc
+    const reference_values = _getCounterReferenceField(this);
+
     if (!model) {
       logger.info('Creating idtracker model named "%s"', opt.trackerModelName);
       // needs to be done, otherwise "undefiend" error if the plugin is used in an sub-document
       const db: mongoose.Connection = this.db ?? (this as any).ownerDocument().db;
       model = db.model(opt.trackerModelName, IDSchema, opt.trackerCollection);
       // test if the counter document already exists
-      const counter = await model.findOne({ model: modelName, field: opt.field }).lean().exec();
+      const counter = await model.findOne({ model: modelName, field: opt.field, reference_values }).lean().exec();
       if (!counter) {
         await model.create({
           model: modelName,
           field: opt.field,
-          count: opt.startAt - opt.incrementBy
+          count: opt.startAt - opt.incrementBy,
+          reference_values
         } as AutoIncrementIDTrackerSpec);
       }
     }
@@ -129,7 +154,8 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
 
     const { count }: { count: number; } = await model.findOneAndUpdate({
       field: opt.field,
-      model: modelName
+      model: modelName,
+      reference_values
     } as AutoIncrementIDTrackerSpec, {
       $inc: { count: opt.incrementBy }
     }, {

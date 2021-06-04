@@ -37,6 +37,11 @@ export interface AutoIncrementIDOptions {
    * @default 0
    */
   startAt?: number;
+  /**
+   * Reference fields for unique counters in the same model
+   * @default []
+   */
+  reference_fields?: string[];
 }
 
 export interface AutoIncrementIDTrackerSpec {
@@ -46,4 +51,6 @@ export interface AutoIncrementIDTrackerSpec {
   field: string;
   /** Current Tracker count */
   count: number;
+  /** Reference values to compare against reference fields */
+  reference_values: object;
 }
