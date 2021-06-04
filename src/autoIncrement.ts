@@ -103,14 +103,14 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
 
   // Return the values of the reference fields in a given doc
   const _getCounterReferenceField = (doc: mongoose.Document): object => {
-    const reference_values: object = {};
+    const referenceValues: object = {};
 
     // Populate the reference object with reference values
     for (const field of opt.reference_fields) {
-      reference_values[field] = doc[field];
+      referenceValues[field] = doc[field];
     }
 
-    return reference_values;
+    return referenceValues;
   };
 
   logger.info('AutoIncrementID called with options %O', opt);
@@ -121,7 +121,7 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
     const modelName: string = (this.constructor as any).modelName;
 
     // Get reference values for doc
-    const reference_values = _getCounterReferenceField(this);
+    const referenceValues = _getCounterReferenceField(this);
 
     if (!model) {
       logger.info('Creating idtracker model named "%s"', opt.trackerModelName);
@@ -129,13 +129,13 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
       const db: mongoose.Connection = this.db ?? (this as any).ownerDocument().db;
       model = db.model(opt.trackerModelName, IDSchema, opt.trackerCollection);
       // test if the counter document already exists
-      const counter = await model.findOne({ model: modelName, field: opt.field, reference_values }).lean().exec();
+      const counter = await model.findOne({ model: modelName, field: opt.field, reference_values: referenceValues }).lean().exec();
       if (!counter) {
         await model.create({
           model: modelName,
           field: opt.field,
           count: opt.startAt - opt.incrementBy,
-          reference_values
+          reference_values: referenceValues
         } as AutoIncrementIDTrackerSpec);
       }
     }
@@ -155,7 +155,7 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
     const { count }: { count: number; } = await model.findOneAndUpdate({
       field: opt.field,
       model: modelName,
-      reference_values
+      reference_values: referenceValues
     } as AutoIncrementIDTrackerSpec, {
       $inc: { count: opt.incrementBy }
     }, {
