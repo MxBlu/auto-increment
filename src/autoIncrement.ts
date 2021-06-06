@@ -65,7 +65,7 @@ const IDSchema = new mongoose.Schema({
   count: Number,
   reference_values: Object
 }, { versionKey: false });
-IDSchema.index({ field: 1, model: 1, reference_value: 1 }, { unique: true });
+IDSchema.index({ field: 1, model: 1, reference_values: 1 }, { unique: true });
 
 export const AutoIncrementIDSkipSymbol = Symbol('AutoIncrementIDSkip');
 
