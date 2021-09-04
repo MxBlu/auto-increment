@@ -63,11 +63,11 @@ export function AutoIncrementSimple(
 /** The Schema used for the trackers */
 const IDSchema = new mongoose.Schema<AutoIncrementIDTrackerSpecDoc>({
   field: String,
-  model: String,
+  modelName: String,
   count: Number,
   reference_values: Object
 }, { versionKey: false });
-IDSchema.index({ field: 1, model: 1, reference_values: 1 }, { unique: true });
+IDSchema.index({ field: 1, modelName: 1, reference_values: 1 }, { unique: true });
 
 export const AutoIncrementIDSkipSymbol = Symbol('AutoIncrementIDSkip');
 
@@ -133,7 +133,7 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
       // test if the counter document already exists
       const counter = await model
         .findOne({
-          model: modelName,
+          modelName: modelName,
           field: opt.field,
           reference_values: referenceValues
         })
@@ -165,7 +165,7 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
       .findOneAndUpdate(
         {
           field: opt.field,
-          model: modelName,
+          modelName: modelName,
           reference_values: referenceValues
         },
         {
