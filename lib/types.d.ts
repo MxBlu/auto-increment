@@ -1,3 +1,5 @@
+/// <reference types="mongoose" />
+import type { mongoose } from '@typegoose/typegoose';
 export interface AutoIncrementOptionsSimple {
     /** Which Field to increment on save */
     field: string;
@@ -43,7 +45,7 @@ export interface AutoIncrementIDOptions {
 }
 export interface AutoIncrementIDTrackerSpec {
     /** The ModelName from the current model */
-    model: string;
+    modelName: string;
     /** The field in the schema */
     field: string;
     /** Current Tracker count */
@@ -51,3 +53,4 @@ export interface AutoIncrementIDTrackerSpec {
     /** Reference values to compare against reference fields */
     reference_values: object;
 }
+export declare type AutoIncrementIDTrackerSpecDoc = mongoose.Document & AutoIncrementIDTrackerSpec;

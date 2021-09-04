@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { AutoIncrementIDOptions, AutoIncrementOptionsSimple } from './types';
+import type { AutoIncrementIDOptions, AutoIncrementOptionsSimple } from './types';
 /**
  * Because since node 4.0.0 the internal util.is* functions got deprecated
  * @param val Any value to test if null or undefined
