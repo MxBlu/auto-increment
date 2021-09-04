@@ -1,6 +1,6 @@
 import * as mongoose from 'mongoose';
 import { logger } from './logSettings';
-import { AutoIncrementIDOptions, AutoIncrementIDTrackerSpec, AutoIncrementOptionsSimple } from './types';
+import type { AutoIncrementIDOptions, AutoIncrementIDTrackerSpecDoc, AutoIncrementOptionsSimple } from './types';
 
 const DEFAULT_INCREMENT = 1;
 
@@ -33,6 +33,7 @@ export function AutoIncrementSimple(
   // check if all fields are valid
   for (const field of fields) {
     const schemaField = schema.path(field.field);
+
     // check if the field is even existing
     if (isNullOrUndefined(schemaField)) {
       throw new Error(`Field "${field.field}" does not exists on the Schema!`);
@@ -47,7 +48,8 @@ export function AutoIncrementSimple(
       field.incrementBy = DEFAULT_INCREMENT;
     }
   }
-  schema.pre('save', function AutoIncrementPreSaveSimple() { // to have an name to the function if debugging
+  // to have an name to the function if debugging
+  schema.pre('save', function AutoIncrementPreSaveSimple() {
     if (!this.isNew) {
       logger.info('Starting to increment "%s"', (this.constructor as mongoose.Model<any>).modelName);
       for (const field of fields) {
@@ -59,7 +61,7 @@ export function AutoIncrementSimple(
 }
 
 /** The Schema used for the trackers */
-const IDSchema = new mongoose.Schema({
+const IDSchema = new mongoose.Schema<AutoIncrementIDTrackerSpecDoc>({
   field: String,
   model: String,
   count: Number,
@@ -99,7 +101,7 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
     }
   }
 
-  let model: mongoose.Model<mongoose.Document & AutoIncrementIDTrackerSpec>;
+  let model: mongoose.Model<AutoIncrementIDTrackerSpecDoc>;
 
   // Return the values of the reference fields in a given doc
   const _getCounterReferenceField = (doc: mongoose.Document): object => {
@@ -127,16 +129,23 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
       logger.info('Creating idtracker model named "%s"', opt.trackerModelName);
       // needs to be done, otherwise "undefiend" error if the plugin is used in an sub-document
       const db: mongoose.Connection = this.db ?? (this as any).ownerDocument().db;
-      model = db.model(opt.trackerModelName, IDSchema, opt.trackerCollection);
+      model = db.model<AutoIncrementIDTrackerSpecDoc>(opt.trackerModelName, IDSchema, opt.trackerCollection);
       // test if the counter document already exists
-      const counter = await model.findOne({ model: modelName, field: opt.field, reference_values: referenceValues }).lean().exec();
+      const counter = await model
+        .findOne({
+          model: modelName,
+          field: opt.field,
+          reference_values: referenceValues
+        })
+        .lean()
+        .exec();
       if (!counter) {
         await model.create({
-          model: modelName,
+          modelName: modelName,
           field: opt.field,
           count: opt.startAt - opt.incrementBy,
           reference_values: referenceValues
-        } as AutoIncrementIDTrackerSpec);
+        });
       }
     }
 
@@ -152,21 +161,32 @@ export function AutoIncrementID(schema: mongoose.Schema<any>, options: AutoIncre
       return;
     }
 
-    const { count }: { count: number; } = await model.findOneAndUpdate({
-      field: opt.field,
-      model: modelName,
-      reference_values: referenceValues
-    } as AutoIncrementIDTrackerSpec, {
-      $inc: { count: opt.incrementBy }
-    }, {
-      new: true,
-      fields: { count: 1, _id: 0 },
-      upsert: true,
-      setDefaultsOnInsert: true
-    }).lean().exec();
+    const leandoc: { count: number } = (await model
+      .findOneAndUpdate(
+        {
+          field: opt.field,
+          model: modelName,
+          reference_values: referenceValues
+        },
+        {
+          $inc: { count: opt.incrementBy },
+        },
+        {
+          new: true,
+          fields: { count: 1, _id: 0 },
+          upsert: true,
+          setDefaultsOnInsert: true,
+        }
+      )
+      .lean()
+      .exec()) as any; // it seems like "FindAndModifyWriteOpResultObject" does not have a "count" property
 
-    logger.info('Setting "%s" to "%d"', opt.field, count);
-    this[opt.field] = count;
+    if (isNullOrUndefined(leandoc)) {
+      throw new Error(`"findOneAndUpdate" incrementing count failed for "${modelName}" on field "${opt.field}"`);
+    }
+
+    logger.info('Setting "%s" to "%d"', opt.field, leandoc.count);
+    this[opt.field] = leandoc.count;
 
     return;
   });

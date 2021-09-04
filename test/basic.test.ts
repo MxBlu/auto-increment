@@ -1,26 +1,17 @@
 import { getModelForClass, modelOptions, plugin, prop } from '@typegoose/typegoose';
 import * as mongoose from 'mongoose';
 import { AutoIncrementID, AutoIncrementSimple } from '../src/autoIncrement';
-import { connect, disconnect } from './utils/mongooseConnect';
 
 describe('Basic Suite', () => {
-  beforeAll(async () => {
-    await connect();
-  });
-
-  afterAll(async () => {
-    await disconnect();
-  });
-
   describe('AutoIncrementSimple', () => {
     it('Basic Function Mongoose', async () => {
       const schema = new mongoose.Schema({
-        somefield: Number
+        somefield: Number,
       });
       schema.plugin(AutoIncrementSimple, [{ field: 'somefield' }]);
       const model = mongoose.model('AutoIncrementSimple-SomeModel', schema);
 
-      const doc: mongoose.Document & { somefield: number; } = await model.create({ somefield: 10 }) as any;
+      const doc: mongoose.Document & { somefield: number } = (await model.create({ somefield: 10 })) as any;
       expect(doc.somefield).toBe(10);
 
       await doc.save();
@@ -49,12 +40,12 @@ describe('Basic Suite', () => {
     it('Basic Function Mongoose', async () => {
       const schema = new mongoose.Schema({
         _id: Number,
-        somefield: Number
+        somefield: Number,
       });
       schema.plugin(AutoIncrementID, {});
       const model = mongoose.model('AutoIncrementID-SomeModel', schema);
 
-      const doc: mongoose.Document & { somefield: number; } = await model.create({ somefield: 10 }) as any;
+      const doc: mongoose.Document & { somefield: number } = (await model.create({ somefield: 10 })) as any;
       expect(doc.somefield).toBe(10);
       expect(doc._id).toBe(0);
 
@@ -92,12 +83,12 @@ describe('Basic Suite', () => {
     it('Basic Function Mongoose With startAt', async () => {
       const schema = new mongoose.Schema({
         _id: Number,
-        somefield: Number
+        somefield: Number,
       });
       schema.plugin(AutoIncrementID, { startAt: 2 });
       const model = mongoose.model('AutoIncrementID-SomeModelStartAt', schema);
 
-      const doc: mongoose.Document & { somefield: number; } = await model.create({ somefield: 10 }) as any;
+      const doc: mongoose.Document & { somefield: number } = (await model.create({ somefield: 10 })) as any;
       expect(doc.somefield).toBe(10);
       expect(doc._id).toBe(2);
 
@@ -171,7 +162,7 @@ describe('Errors', () => {
 
   it('should Error if the schema path is not an number', () => {
     const schema = new mongoose.Schema({
-      nonNumberField: String
+      nonNumberField: String,
     });
     expect(() => schema.plugin(AutoIncrementSimple, { field: 'nonNumberField' })).toThrow(Error);
   });
